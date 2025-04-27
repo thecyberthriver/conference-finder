@@ -1,0 +1,7 @@
+let conferences = [];
+fetch('conferences.json')
+  .then(r => r.json())
+  .then(data => {
+    conferences = data;
+    applyFilters();
+  });
