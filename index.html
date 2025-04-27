@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechCon Search - Find Tech & Cybersecurity Conferences</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .conference-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        .conference-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .map-container {
+            height: 300px;
+            background-color: #f3f4f6;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .tag {
+            transition: all 0.2s ease;
+        }
+        .tag:hover {
+            transform: scale(1.05);
+        }
+        .active-filter {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .date-badge {
+            font-family: monospace;
+        }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header with Search -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+        <div class="container mx-auto px-4 py-12">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                <div class="flex-1">
+                    <h1 class="text-3xl md:text-4xl font-bold mb-2">TechCon Search</h1>
+                    <p class="text-lg md:text-xl opacity-90">Discover tech & cybersecurity conferences across North America</p>
+                </div>
+                <div class="w-full md:w-96 bg-white rounded-lg shadow-lg p-4">
+                    <div class="relative">
+                        <input type="text" id="mainSearch" placeholder="Search conferences..." 
+                            class="w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
+                        <i class="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
+                    </div>
+                    <div class="mt-2 flex justify-end">
+                        <button onclick="applyFilters()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition">
+                            Search <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Filters & Map -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <!-- Filters Panel -->
+            <div class="bg-white rounded-xl shadow-md p-6 lg:col-span-1 h-fit sticky top-4">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800">Filters</h2>
+                    <button onclick="resetFilters()" class="text-sm text-blue-600 hover:text-blue-800">Reset all</button>
+                </div>
+                
+                <!-- Location Filter -->
+                <div class="mb-6">
+                    <h3 class="font-medium text-gray-700 mb-3 flex items-center">
+                        <i class="fas fa-map-marker-alt mr-2 text-blue-500"></i> Location
+                    </h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="filterByRegion('all')" class="region-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50 active-filter" data-region="all">
+                            All Regions
+                        </button>
+                        <button onclick="filterByRegion('northeast')" class="region-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-region="northeast">
+                            Northeast
+                        </button>
+                        <button onclick="filterByRegion('southeast')" class="region-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-region="southeast">
+                            Southeast
+                        </button>
+                        <button onclick="filterByRegion('midwest')" class="region-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-region="midwest">
+                            Midwest
+                        </button>
+                        <button onclick="filterByRegion('west')" class="region-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-region="west">
+                            West
+                        </button>
+                        <button onclick="filterByRegion('canada')" class="region-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-region="canada">
+                            Canada
+                        </button>
+                        <button onclick="filterByRegion('virtual')" class="region-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-region="virtual">
+                            Virtual
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Conference Type -->
+                <div class="mb-6">
+                    <h3 class="font-medium text-gray-700 mb-3 flex items-center">
+                        <i class="fas fa-tags mr-2 text-purple-500"></i> Conference Type
+                    </h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" class="type-filter rounded text-blue-500" value="cybersecurity" checked>
+                            <span class="ml-2 text-gray-700">Cybersecurity</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="type-filter rounded text-blue-500" value="developer" checked>
+                            <span class="ml-2 text-gray-700">Developer</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="type-filter rounded text-blue-500" value="cloud" checked>
+                            <span class="ml-2 text-gray-700">Cloud & Data</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="type-filter rounded text-blue-500" value="ai" checked>
+                            <span class="ml-2 text-gray-700">AI & ML</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="type-filter rounded text-blue-500" value="diversity" checked>
+                            <span class="ml-2 text-gray-700">Diversity in Tech</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Date Range -->
+                <div class="mb-6">
+                    <h3 class="font-medium text-gray-700 mb-3 flex items-center">
+                        <i class="far fa-calendar-alt mr-2 text-green-500"></i> Date Range
+                    </h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="filterByDate('upcoming')" class="date-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50 active-filter" data-date="upcoming">
+                            Upcoming
+                        </button>
+                        <button onclick="filterByDate('past')" class="date-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-date="past">
+                            Past Events
+                        </button>
+                        <button onclick="filterByDate('q1')" class="date-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-date="q1">
+                            Q1 (Jan-Mar)
+                        </button>
+                        <button onclick="filterByDate('q2')" class="date-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-date="q2">
+                            Q2 (Apr-Jun)
+                        </button>
+                        <button onclick="filterByDate('q3')" class="date-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-date="q3">
+                            Q3 (Jul-Sep)
+                        </button>
+                        <button onclick="filterByDate('q4')" class="date-filter px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:bg-gray-50" data-date="q4">
+                            Q4 (Oct-Dec)
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Cost -->
+                <div class="mb-6">
+                    <h3 class="font-medium text-gray-700 mb-3 flex items-center">
+                        <i class="fas fa-dollar-sign mr-2 text-yellow-500"></i> Cost
+                    </h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" class="cost-filter rounded text-blue-500" value="free" checked>
+                            <span class="ml-2 text-gray-700">Free</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="cost-filter rounded text-blue-500" value="paid" checked>
+                            <span class="ml-2 text-gray-700">Paid</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" class="cost-filter rounded text-blue-500" value="scholarship" checked>
+                            <span class="ml-2 text-gray-700">Scholarships</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Map & Results -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Map Visualization -->
+                <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div class="p-4 border-b">
+                        <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                            <i class="fas fa-map-marked-alt text-blue-500 mr-2"></i>
+                            Conference Locations
+                        </h2>
+                    </div>
+                    <div class="map-container flex items-center justify-center">
+                        <div class="text-center p-6">
+                            <i class="fas fa-map fa-3x text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">Map visualization would show conference locations here</p>
+                            <p class="text-sm text-gray-400 mt-2">(Interactive map implementation would require additional mapping libraries)</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Header -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-800">Upcoming Conferences</h2>
+                        <p class="text-gray-600" id="resultsCount">Loading conferences...</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-600">Sort by:</span>
+                        <select id="sortBy" class="border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" onchange="applyFilters()">
+                            <option value="date-asc">Date (Soonest)</option>
+                            <option value="date-desc">Date (Latest)</option>
+                            <option value="name-asc">Name (A-Z)</option>
+                            <option value="name-desc">Name (Z-A)</option>
+                            <option value="price-asc">Price (Low-High)</option>
+                            <option value="price-desc">Price (High-Low)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Conference Cards -->
+                <div id="conferencesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Loading Skeleton -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 animate-pulse">
+                        <div class="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                        <div class="h-4 bg-gray-100 rounded w-full mb-2"></div>
+                        <div class="h-4 bg-gray-100 rounded w-5/6 mb-6"></div>
+                        <div class="flex space-x-2 mb-4">
+                            <div class="h-6 bg-gray-100 rounded-full w-16"></div>
+                            <div class="h-6 bg-gray-100 rounded-full w-20"></div>
+                        </div>
+                        <div class="h-4 bg-gray-100 rounded w-1/2"></div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6 animate-pulse">
+                        <div class="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+                        <div class="h-4 bg-gray-100 rounded w-full mb-2"></div>
+                        <div class="h-4 bg-gray-100 rounded w-5/6 mb-6"></div>
+                        <div class="flex space-x-2 mb-4">
+                            <div class="h-6 bg-gray-100 rounded-full w-16"></div>
+                            <div class="h-6 bg-gray-100 rounded-full w-20"></div>
+                        </div>
+                        <div class="h-4 bg-gray-100 rounded w-1/2"></div>
+                    </div>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="flex justify-center mt-8">
+                    <nav class="inline-flex rounded-md shadow-sm">
+                        <button class="px-3 py-1.5 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Previous
+                        </button>
+                        <button class="px-3 py-1.5 border-t border-b border-gray-300 bg-white text-sm font-medium text-blue-600">
+                            1
+                        </button>
+                        <button class="px-3 py-1.5 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            2
+                        </button>
+                        <button class="px-3 py-1.5 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            3
+                        </button>
+                        <button class="px-3 py-1.5 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Next
+                        </button>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Newsletter Signup -->
+    <div class="bg-gray-100 py-12">
+        <div class="container mx-auto px-4">
+            <div class="bg-white rounded-xl shadow-md overflow-hidden max-w-4xl mx-auto">
+                <div class="md:flex">
+                    <div class="md:w-1/3 bg-blue-600 p-8 text-white flex flex-col justify-center">
+                        <h3 class="text-xl font-bold mb-2">Stay Updated</h3>
+                        <p class="opacity-90">Get the latest conference announcements in your inbox</p>
+                        <div class="mt-4">
+                            <i class="fas fa-envelope-open-text fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                    <div class="md:w-2/3 p-8">
+                        <form class="space-y-4">
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+                                <input type="email" id="email" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="your@email.com">
+                            </div>
+                            <div>
+                                <label for="interests" class="block text-sm font-medium text-gray-700 mb-1">Interests</label>
+                                <select id="interests" class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="all">All conferences</option>
+                                    <option value="cybersecurity">Cybersecurity</option>
+                                    <option value="developer">Developer</option>
+                                    <option value="cloud">Cloud & Data</option>
+                                    <option value="ai">AI & ML</option>
+                                    <option value="diversity">Diversity in Tech</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="consent" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                <label for="consent" class="ml-2 block text-sm text-gray-700">
+                                    I agree to receive occasional conference updates
+                                </label>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition">
+                                Subscribe <i class="fas fa-paper-plane ml-1"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">TechCon Search</h3>
+                    <p class="text-gray-400">The most comprehensive directory of tech and cybersecurity conferences in North America.</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Submit a Conference</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">For Organizers</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Scholarships</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Volunteer Opportunities</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Resources</h3>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Conference Planning Guide</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Speaker Tips</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Diversity Initiatives</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white transition">Blog</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-4">Connect</h3>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white transition"><i class="fab fa-twitter fa-lg"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white transition"><i class="fab fa-linkedin fa-lg"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white transition"><i class="fab fa-github fa-lg"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white transition"><i class="fab fa-discord fa-lg"></i></a>
+                    </div>
+                    <p class="text-gray-400 mt-4">contact@techconsearch.com</p>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
+                <p>&copy; 2023 TechCon Search. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Comprehensive conference data for North America
+        const conferences = [
+            {
+                id: 1,
+                name: "DEF CON",
+                description: "One of the world's largest hacker conventions with villages focusing on different security topics.",
+                type: ["cybersecurity"],
+                region: "west",
+                location: "Las Vegas, NV",
+                startDate: "2023-08-10",
+                endDate: "2023-08-13",
+                cost: "paid",
+                price: 440,
+                url: "https://defcon.org",
+                scholarship: true,
+                cfpOpen: false,
+                tags: ["hacking", "infosec", "red-team"]
+            },
+            {
+                id: 2,
+                name: "Black Hat USA",
+                description: "Premier cybersecurity event featuring briefings, trainings, and networking opportunities.",
+                type: ["cybersecurity"],
+                region: "west",
+                location: "Las Vegas, NV",
+                startDate: "2023-08-05",
+                endDate: "2023-08-10",
+                cost: "paid",
+                price: 2995,
+                url: "https://blackhat.com",
+                scholarship: true,
+                cfpOpen: false,
+                tags: ["enterprise", "training", "threat-intel"]
+            },
+            {
+                id: 3,
+                name: "RSA Conference",
+                description: "Leading cybersecurity conference with keynotes, sessions, and expo.",
+                type: ["cybersecurity"],
+                region: "west",
+                location: "San Francisco, CA",
+                startDate: "2024-02-26",
+                endDate: "2024-03-01",
+                cost: "paid",
+                price: 2295,
+                url: "https://rsaconference.com",
+                scholarship: true,
+                cfpOpen: true,
+                tags: ["enterprise", "compliance", "risk"]
+            },
+            {
+                id: 4,
+                name: "BSidesNYC",
+                description: "Community-driven cybersecurity conference in New York City.",
+                type: ["cybersecurity"],
+                region: "northeast",
+                location: "New York, NY",
+                startDate: "2023-09-16",
+                endDate: "2023-09-17",
+                cost: "free",
+                price: 0,
+                url: "https://bsidesnyc.org",
+                scholarship: false,
+                cfpOpen: false,
+                tags: ["community", "local", "workshops"]
+            },
+            {
+                id: 5,
+                name: "AWS re:Invent",
+                description: "Amazon Web Services' annual cloud computing conference.",
+                type: ["cloud", "developer"],
+                region: "west",
+                location: "Las Vegas, NV",
+                startDate: "2023-11-27",
+                endDate: "2023-12-01",
+                cost: "paid",
+                price: 1799,
+                url: "https://reinvent.awsevents.com",
+                scholarship: false,
+                cfpOpen: false,
+                tags: ["aws", "serverless", "devops"]
+            },
+            {
+                id: 6,
+                name: "Google Cloud Next",
+                description: "Google's annual cloud technology conference.",
+                type: ["cloud", "developer"],
+                region: "west",
+                location: "San Francisco, CA",
+                startDate: "2023-08-29",
+                endDate: "2023-08-31",
+                cost: "paid",
+                price: 999,
+                url: "https://cloud.withgoogle.com/next",
+                scholarship: false,
+                cfpOpen: false,
+                tags: ["gcp", "kubernetes", "bigquery"]
+            },
+            {
+                id: 7,
+                name: "Microsoft Ignite",
+                description: "Microsoft's premier conference for developers and IT professionals.",
+                type: ["cloud", "developer"],
+                region: "west",
+                location: "Seattle, WA",
+                startDate: "2023-11-15",
+                endDate: "2023-11-16",
+                cost: "paid",
+                price: 1095,
+                url: "https://ignite.microsoft.com",
+                scholarship: false,
+                cfpOpen: false,
+                tags: ["azure", "m365", "windows"]
+            },
+            {
+                id: 8,
+                name: "Grace Hopper Celebration",
+                description: "World's largest gathering of women technologists.",
+                type: ["diversity", "developer"],
+                region: "southeast",
+                location: "Orlando, FL",
+                startDate: "2023-09-26",
+                endDate: "2023-09-29",
+                cost: "paid",
+                price: 850,
+                url: "https://ghc.anitab.org",
+                scholarship: true,
+                cfpOpen: false,
+                tags: ["women-in-tech", "career", "networking"]
+            },
+            {
+                id: 9,
+                name: "Lesbians Who Tech & Allies Summit",
+                description: "Conference for LGBTQ+ women and allies in tech.",
+                type: ["diversity", "developer"],
+                region: "west",
+                location: "San Francisco, CA",
+                startDate: "2024-03-04",
+                endDate: "2024-03-06",
+                cost: "paid",
+                price: 495,
+                url: "https://lesbianswhotech.org",
+                scholarship: true,
+                cfpOpen: true,
+                tags: ["lgbtq", "inclusion", "leadership"]
+            },
+            {
+                id: 10,
+                name: "Black Hat Europe",
+                description: "European edition of the premier cybersecurity conference.",
+                type: ["cybersecurity"],
+                region: "canada",
+                location: "Toronto, ON",
+                startDate: "2023-12-04",
+                endDate: "2023-12-07",
+                cost: "paid",
+                price: 2295,
+                url: "https://blackhat.com",
+                scholarship: true,
+                cfpOpen: true,
+                tags: ["enterprise", "training", "threat-intel"]
+            },
+            {
+                id: 11,
+                name: "ShmooCon",
+                description: "East coast hacker conference with a focus on new research.",
+                type: ["cybersecurity"],
+                region: "northeast",
+                location: "Washington, DC",
+                startDate: "2024-01-19",
+                endDate: "2024-01-21",
+                cost: "paid",
+                price: 150,
+                url: "https://shmoocon.org",
+                scholarship: false,
+                cfpOpen: false,
+                tags: ["hacking", "research", "community"]
+            },
+            {
+                id: 12,
+                name: "PyCon US",
+                description: "Largest annual gathering for the Python community.",
+                type: ["developer"],
+                region: "midwest",
+                location: "Pittsburgh, PA",
+                startDate: "2024-05-15",
+                endDate: "2024-05-23",
+                cost: "paid",
+                price: 400,
+                url: "https://us.pycon.org",
+                scholarship: true,
+                cfpOpen: true,
+                tags: ["python", "programming", "open-source"]
+            },
+            {
+                id: 13,
+                name: "Apple WWDC",
+                description: "Apple's Worldwide Developers Conference.",
+                type: ["developer"],
+                region: "west",
+                location: "Cupertino, CA",
+                startDate: "2024-06-10",
+                endDate: "2024-06-14",
+                cost: "paid",
+                price: 1599,
+                url: "https://developer.apple.com/wwdc",
+                scholarship: true,
+                cfpOpen: false,
+                tags: ["ios", "macos", "swift"]
+            },
+            {
+                id: 14,
+                name: "O'Reilly AI Conference",
+                description: "Leading conference on artificial intelligence and machine learning.",
+                type: ["ai", "developer"],
+                region: "west",
+                location: "San Francisco, CA",
+                startDate: "2024-04-15",
+                endDate: "2024-04-18",
+                cost: "paid",
+                price: 1795,
+                url: "https://conferences.oreilly.com/artificial-intelligence",
+                scholarship: false,
+                cfpOpen: true,
+                tags: ["machine-learning", "deep-learning", "nlp"]
+            },
+            {
+                id: 15,
+                name: "TechCrunch Disrupt",
+                description: "Premier startup conference featuring the Startup Battlefield competition.",
+                type: ["developer", "diversity"],
+                region: "west",
+                location: "San Francisco, CA",
+                startDate: "2023-09-19",
+                endDate: "2023-09-21",
+                cost: "paid",
+                price: 1295,
+                url: "https://techcrunch.com/events",
+                scholarship: true,
+                cfpOpen: false,
+                tags: ["startups", "vc", "innovation"]
+            },
+            {
+                id: 16,
+                name: "DockerCon",
+                description: "Conference for containerization and cloud-native technologies.",
+                type: ["cloud", "developer"],
+                region: "virtual",
+                location: "Virtual",
+                startDate: "2023-10-05",
+                endDate: "2023-10-06",
+                cost: "free",
+                price: 0,
+                url: "https://docker.com",
+                scholarship: false,
+                cfpOpen: false,
+                tags: ["containers", "kubernetes", "devops"]
+            },
+            {
+                id: 17,
+                name: "KubeCon + CloudNativeCon",
+                description: "The Cloud Native Computing Foundation's flagship conference.",
+                type: ["cloud", "developer"],
+                region: "midwest",
+                location: "Chicago, IL",
+                startDate: "2023-11-06",
+                endDate: "2023-11-09",
+                cost: "paid",
+                price: 1100,
+                url: "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america",
+                scholarship: true,
+                cfpOpen: false,
+                tags: ["kubernetes", "cncf", "microservices"]
+            },
+            {
+                id: 18,
+                name: "BSides Toronto",
+                description: "Community-driven security conference in Toronto.",
+                type: ["cybersecurity"],
+                region: "canada",
+                location: "Toronto, ON",
+                startDate: "2024-02-10",
+                endDate: "2024-02-11",
+                cost: "free",
+                price: 0,
+                url: "https://bsidesto.org",
+                scholarship: false,
+                cfpOpen: true,
+                tags: ["community", "local", "workshops"]
+            },
+            {
+                id: 19,
+                name: "Women in Cybersecurity (WiCyS)",
+                description: "Conference focused on recruiting, retaining and advancing women in cybersecurity.",
+                type: ["cybersecurity", "diversity"],
+                region: "southeast",
+                location: "Nashville, TN",
+                startDate: "2024-04-11",
+                endDate: "2024-04-13",
+                cost: "paid",
+                price: 700,
+                url: "https://www.wicys.org",
+                scholarship: true,
+                cfpOpen: true,
+                tags: ["women-in-tech", "career", "networking"]
+            },
+            {
+                id: 20,
+                name: "The Diana Initiative",
+                description: "Conference promoting diversity and inclusion in cybersecurity.",
+                type: ["cybersecurity", "diversity"],
+                region: "west",
+                location: "Las Vegas, NV",
+                startDate: "2023-08-09",
+                endDate: "2023-08-09",
+                cost: "paid",
+                price: 100,
+                url: "https://dianainitiative.org",
+                scholarship: true,
+                cfpOpen: false,
+                tags: ["women-in-tech", "inclusion", "community"]
+            }
+        ];
+
+        // Current filter state
+        let currentFilters = {
+            region: 'all',
+            types: ['cybersecurity', 'developer', 'cloud', 'ai', 'diversity'],
+            costs: ['free', 'paid', 'scholarship'],
+            dateRange: 'upcoming',
+            searchTerm: '',
+            sortBy: 'date-asc'
+        };
+
+        // Format date for display
+        function formatDate(dateStr) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateStr).toLocaleDateString('en-US', options);
+        }
+
+        // Format price for display
+        function formatPrice(price) {
+            return price === 0 ? 'Free' : `$${price.toLocaleString()}`;
+        }
+
+        // Get badge color based on conference type
+        function getBadgeColor(type) {
+            const colors = {
+                'cybersecurity': 'bg-red-100 text-red-800',
+                'developer': 'bg-blue-100 text-blue-800',
+                'cloud': 'bg-indigo-100 text-indigo-800',
+                'ai': 'bg-purple-100 text-purple-800',
+                'diversity': 'bg-pink-100 text-pink-800'
+            };
+            return colors[type] || 'bg-gray-100 text-gray-800';
+        }
+
+        // Get badge color based on region
+        function getRegionColor(region) {
+            const colors = {
+                'northeast': 'bg-green-100 text-green-800',
+                'southeast': 'bg-yellow-100 text-yellow-800',
+                'midwest': 'bg-orange-100 text-orange-800',
+                'west': 'bg-red-100 text-red-800',
+                'canada': 'bg-blue-100 text-blue-800',
+                'virtual': 'bg-gray-100 text-gray-800'
+            };
+            return colors[region] || 'bg-gray-100 text-gray-800';
+        }
+
+        // Render conference cards
+        function renderConferences(filteredConferences) {
+            const container = document.getElementById('conferencesContainer');
+            const resultsCount = document.getElementById('resultsCount');
+            
+            if (filteredConferences.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <i class="fas fa-search fa-3x text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-medium text-gray-700">No conferences found</h3>
+                        <p class="text-gray-500">Try adjusting your filters or search term</p>
+                    </div>
+                `;
+                resultsCount.textContent = "0 conferences found";
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            filteredConferences.forEach(conf => {
+                const card = document.createElement('div');
+                card.className = `conference-card bg-white rounded-xl shadow-sm overflow-hidden border-l-4 border-blue-500`;
+                
+                // Get primary type for badge
+                const primaryType = Array.isArray(conf.type) ? conf.type[0] : conf.type;
+                
+                card.innerHTML = `
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-semibold text-gray-800">${conf.name}</h3>
+                            <span class="date-badge text-sm font-medium px-2 py-1 rounded bg-gray-100 text-gray-700">
+                                ${formatDate(conf.startDate)}${conf.endDate ? ` - ${formatDate(conf.endDate)}` : ''}
+                            </span>
+                        </div>
+                        
+                        <p class="text-gray-600 mb-4">${conf.description}</p>
+                        
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="inline-block ${getBadgeColor(primaryType)} text-xs font-semibold px-2 py-1 rounded-full">
+                                ${primaryType.charAt(0).toUpperCase() + primaryType.slice(1)}
+                            </span>
+                            <span class="inline-block ${getRegionColor(conf.region)} text-xs font-semibold px-2 py-1 rounded-full">
+                                ${conf.region.charAt(0).toUpperCase() + conf.region.slice(1)}
+                            </span>
+                            ${conf.tags.map(tag => `
+                                <span class="inline-block bg-gray-100 text-gray-700 text-xs font-medium px-2 py-1 rounded-full tag">
+                                    ${tag}
+                                </span>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="text-sm text-gray-700"><i class="fas fa-map-marker-alt mr-1 text-gray-500"></i> ${conf.location}</p>
+                                <p class="text-sm text-gray-700 mt-1"><i class="fas fa-ticket-alt mr-1 text-gray-500"></i> ${formatPrice(conf.price)}</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                ${conf.scholarship ? `
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Scholarships
+                                    </span>
+                                ` : ''}
+                                ${conf.cfpOpen ? `
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        CFP Open
+                                    </span>
+                                ` : ''}
+                                <a href="${conf.url}" target="_blank" class="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    Details <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            
+            resultsCount.textContent = `${filteredConferences.length} conferences found`;
+        }
+
+        // Filter conferences based on current filters
+        function filterConferences() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            let filtered = conferences.filter(conf => {
+                // Filter by region
+                if (currentFilters.region !== 'all' && conf.region !== currentFilters.region) {
+                    return false;
+                }
+                
+                // Filter by type
+                const confTypes = Array.isArray(conf.type) ? conf.type : [conf.type];
+                const typeMatch = confTypes.some(t => currentFilters.types.includes(t));
+                if (!typeMatch) return false;
+                
+                // Filter by cost
+                if (!currentFilters.costs.includes(conf.cost)) return false;
+                
+                // Filter by date range
+                if (currentFilters.dateRange === 'upcoming' && conf.startDate < today) return false;
+                if (currentFilters.dateRange === 'past' && conf.startDate >= today) return false;
+                
+                // Filter by quarter
+                if (currentFilters.dateRange.startsWith('q')) {
+                    const quarter = currentFilters.dateRange.substring(1);
+                    const month = new Date(conf.startDate).getMonth() + 1;
+                    
+                    if (quarter === '1' && !(month >= 1 && month <= 3)) return false;
+                    if (quarter === '2' && !(month >= 4 && month <= 6)) return false;
+                    if (quarter === '3' && !(month >= 7 && month <= 9)) return false;
+                    if (quarter === '4' && !(month >= 10 && month <= 12)) return false;
+                }
+                
+                // Filter by search term
+                if (currentFilters.searchTerm) {
+                    const searchFields = `${conf.name} ${conf.description} ${conf.location} ${conf.tags.join(' ')}`.toLowerCase();
+                    if (!searchFields.includes(currentFilters.searchTerm.toLowerCase())) return false;
+                }
+                
+                return true;
+            });
+            
+            // Sort results
+            filtered.sort((a, b) => {
+                switch(currentFilters.sortBy) {
+                    case 'date-asc':
+                        return a.startDate.localeCompare(b.startDate);
+                    case 'date-desc':
+                        return b.startDate.localeCompare(a.startDate);
+                    case 'name-asc':
+                        return a.name.localeCompare(b.name);
+                    case 'name-desc':
+                        return b.name.localeCompare(a.name);
+                    case 'price-asc':
+                        return a.price - b.price;
+                    case 'price-desc':
+                        return b.price - a.price;
+                    default:
+                        return a.startDate.localeCompare(b.startDate);
+                }
+            });
+            
+            renderConferences(filtered);
+        }
+
+        // Filter by region
+        function filterByRegion(region) {
+            currentFilters.region = region;
+            document.querySelectorAll('.region-filter').forEach(btn => {
+                btn.classList.remove('active-filter');
+                if (btn.dataset.region === region) {
+                    btn.classList.add('active-filter');
+                }
+            });
+            applyFilters();
+        }
+
+        // Filter by date range
+        function filterByDate(dateRange) {
+            currentFilters.dateRange = dateRange;
+            document.querySelectorAll('.date-filter').forEach(btn => {
+                btn.classList.remove('active-filter');
+                if (btn.dataset.date === dateRange) {
+                    btn.classList.add('active-filter');
+                }
+            });
+            applyFilters();
+        }
+
+        // Apply all filters
+        function applyFilters() {
+            // Get selected types
+            currentFilters.types = [];
+            document.querySelectorAll('.type-filter:checked').forEach(checkbox => {
+                currentFilters.types.push(checkbox.value);
+            });
+            
+            // Get selected costs
+            currentFilters.costs = [];
+            document.querySelectorAll('.cost-filter:checked').forEach(checkbox => {
+                currentFilters.costs.push(checkbox.value);
+            });
+            
+            // Get search term
+            currentFilters.searchTerm = document.getElementById('mainSearch').value;
+            
+            // Get sort by
+            currentFilters.sortBy = document.getElementById('sortBy').value;
+            
+            filterConferences();
+        }
+
+        // Reset all filters
+        function resetFilters() {
+            // Reset region
+            currentFilters.region = 'all';
+            document.querySelectorAll('.region-filter').forEach(btn => {
+                btn.classList.remove('active-filter');
+                if (btn.dataset.region === 'all') {
+                    btn.classList.add('active-filter');
+                }
+            });
+            
+            // Reset date range
+            currentFilters.dateRange = 'upcoming';
+            document.querySelectorAll('.date-filter').forEach(btn => {
+                btn.classList.remove('active-filter');
+                if (btn.dataset.date === 'upcoming') {
+                    btn.classList.add('active-filter');
+                }
+            });
+            
+            // Reset type filters
+            document.querySelectorAll('.type-filter').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            currentFilters.types = ['cybersecurity', 'developer', 'cloud', 'ai', 'diversity'];
+            
+            // Reset cost filters
+            document.querySelectorAll('.cost-filter').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            currentFilters.costs = ['free', 'paid', 'scholarship'];
+            
+            // Reset search
+            document.getElementById('mainSearch').value = '';
+            currentFilters.searchTerm = '';
+            
+            // Reset sort
+            document.getElementById('sortBy').value = 'date-asc';
+            currentFilters.sortBy = 'date-asc';
+            
+            filterConferences();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up search input
+            document.getElementById('mainSearch').addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    applyFilters();
+                }
+            });
+            
+            // Set up type filters
+            document.querySelectorAll('.type-filter').forEach(checkbox => {
+                checkbox.addEventListener('change', applyFilters);
+            });
+            
+            // Set up cost filters
+            document.querySelectorAll('.cost-filter').forEach(checkbox => {
+                checkbox.addEventListener('change', applyFilters);
+            });
+            
+            // Initial render
+            filterConferences();
+        });
+    </script>
+<p style="border-radius: 8px; text-align: center; font-size: 12px; color: #fff; margin-top: 16px;position: fixed; left: 8px; bottom: 8px; z-index: 10; background: rgba(0, 0, 0, 0.8); padding: 4px 8px;">Made with <img src="https://enzostvs-deepsite.hf.space/logo.svg" alt="DeepSite Logo" style="width: 16px; height: 16px; vertical-align: middle;display:inline-block;margin-right:3px;filter:brightness(0) invert(1);"><a href="https://enzostvs-deepsite.hf.space" style="color: #fff;text-decoration: underline;" target="_blank" >DeepSite</a> - 🧬 <a href="https://enzostvs-deepsite.hf.space?remix=gerryo40/conference-search" style="color: #fff;text-decoration: underline;" target="_blank" >Remix</a></p></body>
+</html>
